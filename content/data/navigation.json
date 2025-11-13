@@ -1,0 +1,13 @@
+{
+  "links": [
+    {
+      "name": "Blog",
+      "href": "/blog"
+    },
+    {
+      "name": "Intro",
+      "href": "/blog/introducing-cloudcannon-nextjs-starter"
+    }
+  ],
+  "github_url": "https://github.com/gouwestadmm/cloudcannon-nextjs-starter"
+}

@@ -1,0 +1,397 @@
+paths:
+  uploads: public/uploads
+  static: public
+collections_config:
+  data:
+    path: content/data
+    name: Site Data
+    icon: settings
+    disable_url: true
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
+  pages:
+    path: content/pages
+    name: Pages
+    icon: insert_page_break
+    url: "[full_slug]"
+    disable_url: false
+    description: Site pages with optional visual content blocks
+    _enabled_editors:
+      - visual
+      - content
+      - data
+    add_options:
+      - name: New Page (Visual Editor)
+        icon: view_module
+        editor: visual
+        schema: page-visual
+      - name: New Page (Content Editor)
+        icon: article
+        editor: content
+        schema: page
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
+    schemas:
+      page:
+        path: schemas/page.md
+        reorder_inputs: true
+        hide_extra_inputs: false
+        remove_empty_inputs: false
+        remove_extra_inputs: true
+        name: Page
+        icon: insert_page_break
+      page-visual:
+        path: schemas/page-visual.md
+        reorder_inputs: true
+        hide_extra_inputs: false
+        remove_empty_inputs: false
+        remove_extra_inputs: true
+        name: Page with Visual Editor
+        icon: view_module
+  posts:
+    path: content/posts
+    name: Blog Posts
+    icon: article
+    url: /blog/[slug]/
+    disable_url: false
+    description: Blog posts and articles
+    _enabled_editors:
+      - visual
+      - content
+      - data
+    add_options:
+      - name: New Post
+        icon: article
+        editor: content
+        schema: post
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
+    schemas:
+      post:
+        path: schemas/post.md
+        reorder_inputs: true
+        hide_extra_inputs: false
+        remove_empty_inputs: false
+        remove_extra_inputs: true
+        name: Blog Post
+        icon: article
+_inputs:
+  _uuid:
+    type: auto
+    instance_value: UUID
+    hidden: true
+    cascade: true
+  title:
+    type: markdown
+    options:
+      allow_resize: true
+      allow_custom_markup: false
+      remove_custom_markup: false
+      initial_height: 135
+      bold: true
+      image_size_attributes: true
+      italic: true
+      resize_style:
+      subscript: true
+      superscript: true
+    label: Title
+    cascade: true
+  subtitle:
+    type: markdown
+    options:
+      allow_resize: true
+      allow_custom_markup: false
+      remove_custom_markup: false
+      initial_height: 320
+      bold: true
+      image_size_attributes: true
+      italic: true
+      subscript: true
+      superscript: true
+    label: Subtitle
+    cascade: true
+  introduction:
+    type: markdown
+    options:
+      allow_resize: true
+      allow_custom_markup: false
+      remove_custom_markup: false
+      initial_height: 320
+      bold: true
+      format: p
+      image_size_attributes: true
+      italic: true
+      link: true
+      resize_style:
+    label: Introduction
+    cascade: true
+  content:
+    type: markdown
+    options:
+      allow_resize: true
+      allow_custom_markup: false
+      remove_custom_markup: false
+      format: p h1 h2 h3 h4 h5 h6
+      bulletedlist: true
+      numberedlist: true
+      superscript: true
+      subscript: true
+      underline: true
+      code_block: true
+      initial_height: 320
+      blockquote: true
+      bold: true
+      image_size_attributes: true
+      italic: true
+      link: true
+      table: true
+    label: Content
+    cascade: true
+  featured_image:
+    type: image
+    options:
+      resize_style: contain
+      width: 2400
+      height: 1800
+      empty_type: "null"
+    comment: Featured image for the page/post
+    cascade: true
+  featured_image_alt:
+    type: text
+    label: Image Alt Text
+    cascade: true
+  published:
+    type: checkbox
+    label: Published
+    cascade: true
+  date:
+    type: datetime
+    label: Date
+    cascade: true
+  author:
+    type: text
+    label: Author
+    cascade: true
+  summary:
+    type: textarea
+    label: Summary
+    cascade: true
+  tags:
+    type: array
+    label: Tags
+    cascade: true
+  categories:
+    type: array
+    label: Categories
+    cascade: true
+  content_blocks:
+    type: array
+    label: Content Blocks
+    options:
+      structures: _structures.content_blocks
+    cascade: true
+  section:
+    type: object
+    label: Section Settings
+    comment: Configure section appearance and spacing
+    options:
+      structures:
+        values:
+          - value:
+              background_color: null
+              padding_top: null
+              padding_bottom: null
+    cascade: true
+  background_color:
+    type: select
+    options:
+      allow_empty: true
+      values:
+        - transparent
+        - white
+        - stone
+        - slate
+        - neutral
+        - primary
+        - secondary
+        - accent
+    label: Background Color
+    cascade: true
+  background_image:
+    type: image
+    options:
+      resize_style: cover
+      empty_type: "null"
+    label: Background Image
+    comment: Optional background image for the section
+    cascade: true
+  padding_top:
+    type: select
+    options:
+      allow_empty: true
+      values:
+        - none
+        - small
+        - medium
+        - large
+    label: Padding Top
+    cascade: true
+  padding_bottom:
+    type: select
+    options:
+      allow_empty: true
+      values:
+        - none
+        - small
+        - medium
+        - large
+    label: Padding Bottom
+    cascade: true
+  links:
+    type: array
+    label: Navigation Links
+    comment: Main navigation menu items
+    cascade: true
+  github_url:
+    type: url
+    label: GitHub Repository URL
+    comment: Link to your GitHub repository
+    cascade: true
+_structures:
+  content_blocks:
+    style: modal
+    values:
+      - icon: view_headline
+        label: Header Section
+        value:
+          _type: header
+          title:
+          subtitle:
+          introduction:
+          image:
+          buttons:
+            - text:
+              url:
+              variant: primary
+      - icon: view_column
+        label: Intro Section
+        value:
+          _type: intro
+          title:
+          subtitle:
+          introduction:
+          buttons:
+            - text:
+              url:
+              variant: primary
+      - icon: call_to_action
+        label: CTA Section
+        value:
+          _type: cta
+          title:
+          subtitle:
+          introduction:
+          image:
+          image_alt:
+          buttons:
+            - text:
+              url:
+              variant: primary
+      - icon: image
+        label: Image Block
+        value:
+          _type: image_block
+          image:
+          image_alt:
+          aspect_ratio: 16/9
+      - icon: view_module
+        label: Image with Content
+        value:
+          _type: image-with-content
+          title:
+          subtitle:
+          content:
+          image:
+          image_alt:
+          layout: image_left
+          size: medium
+          color: light
+          buttons:
+            - link:
+              label:
+              open_in_new_tab: false
+              style:
+                variant: primary
+                size: default
+      - icon: article
+        label: Mixed Content
+        value:
+          _type: mixed-content
+          title:
+          content:
+      - icon: checklist
+        label: Feature List
+        value:
+          _type: feature_list
+          title:
+          subtitle:
+          introduction:
+          features:
+            - name:
+              description:
+              icon:
+      - icon: fact_check
+        label: Features
+        value:
+          _type: features
+          title:
+          subtitle:
+          introduction:
+          features:
+            - name:
+              description:
+      - icon: grid_view
+        label: Logo Grid
+        value:
+          _type: logo_grid
+          title:
+          subtitle:
+          logos:
+            - name:
+              image:
+              image_dark:
+              url:
+  buttons:
+    style: select
+    values:
+      - icon: link
+        label: Button
+        value:
+          text:
+          url:
+          variant: primary
+editor:
+  default_path: /content/pages
+timezone: Europe/Amsterdam
+markdown:
+  engine: commonmark
+  options:
+    xhtml: false
+    breaks: false
+    linkify: false
+    typographer: false
+    spaced_lists: false
+    sentence_per_line: false
+    gfm: false
+    code_block_fences: "```"
+    escape_snippets_in_code_blocks: false
+    treat_indentation_as_code: false
+    table: false
+    strikethrough: false
+    subscript: false
+    superscript: false
+    heading_ids: false
+    attributes: false

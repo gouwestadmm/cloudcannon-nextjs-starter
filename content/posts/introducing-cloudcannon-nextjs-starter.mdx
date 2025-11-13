@@ -1,0 +1,78 @@
+---
+title: Introducing the CloudCannon + Next.js Starter
+summary: >-
+  This is a Next.js + Cloudcannon starter to get you up and running fast with Cloudcannon (visual) editing in a Next.js site. With a somewhat opiniated set of tools to streamline development and content management.
+date: 2025-11-13T00:00:00Z
+author:
+tags:
+  - cloudcannon
+  - nextjs
+  - mdx
+  - content-collections
+  - scaffolding
+---
+
+I have been working with Cloudcannon for 10+ years ever since it was still in Beta (and yeah, I definitely used it in production back then). The last 5 years or so I have been switching over from Jekyll to Next.js, but kept utilizing CloudCannon for content management and visual editing for some of my projects. In this starter project I wanted to share some of my base setup patterns and best practices for building a Next.js site with CloudCannon. I hope this will help you get started faster with CloudCannon and Next.js, because it is a great combination!
+
+##### Key Features
+
+- **Cloudcannon base setup**: Pre-configured `cloudcannon.config.yml` with collections and schemas to get you started quickly.
+- **Editable Regions**: Use CloudCannon's new editable regions visual editing to update content directly on the page. This starter includes a block based page-builder with some example blocks.
+- **Content Collections**: Uses Content Collections to transform MDX content with Hot Module Replacement (HMR) during development for instant preview of content changes.
+- **Auto-Scaffolding Script**: Automatically generates your content-collections configuration from CloudCannon config and schemas. It detects markdown fields and sets them up for automatic MDX compilation, creating both `field` and `field_mdx` properties—so editors use simple markdown while developers get React component support. This works recursively through nested objects and arrays too.
+- **Next.js Routing**: Uses Next.js App Router with dynamic routing and `generateStaticParams` for static generation. Built with React 19 and Turbopack for faster development.
+- **Tailwind 4 and Ultracite/Biome**: Tailwind 4 with fluid typography and custom theme system. Ultracite (Biome preset) handles formatting and linting with zero configuration.
+
+##### Getting Started
+
+To get started with this Next.js + CloudCannon starter, follow these steps:
+
+1. **Install Dependencies**:
+   Make sure you have `pnpm` installed. Then, run the following command to install all dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. **Run the Development Server**:
+   Start the development server to preview your site locally:
+
+   ```bash
+   pnpm run dev
+   ```
+
+   By default, the site will be available at `http://localhost:3000`.
+
+3. **Customize Your Content**:
+   Modify `cloudcannon.config.yml` to define collections or update schemas in the `schemas/` directory. The scaffolding script runs automatically before dev and build commands, generating TypeScript types and content-collections configuration. It detects markdown fields from your CloudCannon config and sets them up for automatic MDX compilation.
+
+4. **Add a New Block**:
+   Create a block component in `src/components/blocks`, register it in `src/lib/component-registry.ts`, and add it to the `content_blocks` array in `cloudcannon.config.yml`.
+
+5. **Deploy for CloudCannon Editing**:
+   To enable CloudCannon editing, ensure the `ENVIRONMENT` environment variable is set to `cloudcannon` in your deployment configuration. For example, in Vercel, add this to your environment variables:
+
+   ```bash
+   ENVIRONMENT=cloudcannon
+   ```
+
+   This ensures that the Next.js configuration properly supports CloudCannon’s visual editing features.
+
+By following these steps, you'll have a fully functional Next.js site integrated with CloudCannon, ready for content editing and further customization.
+
+##### A Few Other Nice Touches
+
+This starter uses some modern tools that make development more pleasant. It's built with React 19 and uses Turbopack for faster builds and hot reloading—especially noticeable when working with content.
+
+Tailwind 4 is configured with a fluid typography system that scales smoothly across screen sizes, so text remains readable without manual breakpoint adjustments. The theme is defined in `src/app/globals.css` using CSS variables.
+
+There's also a second scaffolding script (`generate-mdx-styles.js`) that extracts Tailwind classes from your components and generates matching styles for the CloudCannon editor. This keeps the editing experience visually consistent with your live site, which editors appreciate.
+
+##### Key Files to Know
+
+- `src/lib/component-registry.ts`: Register React components with CloudCannon's editable regions.
+- `src/components/blocks`: Examples of reusable blocks with `Section` components for visual settings.
+- `scripts/generate-content-collections.js`: Automates content configuration and TypeScript types.
+- `cloudcannon.config.yml`: Define collections, schemas, and content blocks.
+
+This starter is built to save time and reduce repetitive work. It provides a solid foundation for creating content-rich websites with modern tools.

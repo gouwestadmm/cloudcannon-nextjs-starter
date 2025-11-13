@@ -1,0 +1,50 @@
+{
+  "name": "cloudcannon-nextjs-starter",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate:collections": "node scripts/generate-content-collections.js",
+    "generate:mdx-styles": "node scripts/generate-mdx-styles.js",
+    "predev": "npm run generate:collections",
+    "dev": "next dev --turbopack",
+    "prebuild": "npm run generate:collections",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@cloudcannon/editable-regions": "^0.0.6",
+    "@cloudcannon/javascript-api": "^0.0.10",
+    "@mdx-js/mdx": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "gray-matter": "^4.0.3",
+    "lucide-react": "^0.552.0",
+    "mdx-bundler": "^10.1.1",
+    "motion": "^12.23.24",
+    "next": "^16.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.66.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.3",
+    "@content-collections/core": "^0.12.0",
+    "@content-collections/mdx": "^0.2.2",
+    "@content-collections/next": "^0.2.9",
+    "@tailwindcss/postcss": "^4.1.16",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.3",
+    "ultracite": "^6.2.1"
+  }
+}

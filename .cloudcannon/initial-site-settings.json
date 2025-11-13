@@ -1,0 +1,21 @@
+{
+  "ssg": "nextjs",
+  "mode": "hosted",
+  "build": {
+    "hugoVersion": "0.128.1",
+    "rubyVersion": "2.7.3",
+    "nodeVersion": "22",
+    "denoVersion": "1.40.2",
+    "environment_variables": [
+      {
+        "key": "ENVIRONMENT",
+        "value": "cloudcannon"
+      }
+    ],
+    "install_command": "pnpm i",
+    "build_command": "pnpm run build",
+    "output_path": "out",
+    "preserved_paths": "node_modules/,.next/",
+    "preserveOutput": true
+  }
+}

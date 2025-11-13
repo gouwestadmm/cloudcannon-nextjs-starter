@@ -1,0 +1,1 @@
+{"version":3,"file":"editable-region-button.d.ts","sourceRoot":"","sources":["../../../components/ui/editable-region-button.ts"],"names":[],"mappings":"AAEA,MAAM,CAAC,OAAO,OAAO,oBAAqB,SAAQ,WAAW;IAC5D,OAAO,CAAC,MAAM,CAAC,CAAa;IAE5B,iBAAiB;IAUjB,MAAM,CAAC,MAAM,EAAE,UAAU;CAezB;AAID,OAAO,CAAC,MAAM,CAAC;IACd,UAAU,qBAAqB;QAC9B,wBAAwB,EAAE,oBAAoB,CAAC;KAC/C;CACD"}

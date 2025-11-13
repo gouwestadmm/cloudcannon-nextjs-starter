@@ -1,0 +1,377 @@
+import "../components/ui/editable-array-item-controls.js";
+import { hasEditableArrayItem, isEditableArray, isEditableArrayItem, isEditableElement, } from "../helpers/checks.js";
+import { CloudCannon, realizeAPIValue } from "../helpers/cloudcannon.js";
+import EditableComponent from "./editable-component.js";
+export default class EditableArrayItem extends EditableComponent {
+    constructor() {
+        super(...arguments);
+        this.parent = null;
+        this.structureStrings = [];
+    }
+    shouldMount() {
+        return this.value !== undefined;
+    }
+    validateConfiguration() {
+        let parentElement = this.element.parentElement;
+        while (parentElement && !isEditableElement(parentElement)) {
+            parentElement = parentElement.parentElement;
+        }
+        if (!parentElement || !isEditableArray(parentElement)) {
+            this.element.classList.add("errored");
+            const error = document.createElement("editable-region-error-card");
+            error.setAttribute("heading", "Failed to render array item");
+            error.setAttribute("message", "Array item editable regions must be nested inside an array editable region but this element has no parent editable region. Please check that this element is inside an array editable region.");
+            this.element.replaceChildren(error);
+            return false;
+        }
+        return true;
+    }
+    isValidDropzone(e) {
+        const source = this.parent?.contextBase?.filePath;
+        if (!source || !e.dataTransfer) {
+            return false;
+        }
+        if (e.dataTransfer?.types.includes(source.toLowerCase())) {
+            return true;
+        }
+        const dragType = this.getDragType();
+        if (!dragType || !e.dataTransfer.types.includes(dragType)) {
+            return false;
+        }
+        if (dragType === "cc:structure") {
+            if (this.structureStrings.length === 0) {
+                return false;
+            }
+            const structureString = e.dataTransfer.types
+                .find((type) => type.startsWith("structure:"))
+                ?.replace(/^structure:/, "");
+            if (!structureString) {
+                return false;
+            }
+            const targetStructure = this.structureStrings.find((targetValue) => structureString === targetValue);
+            if (!targetStructure) {
+                return false;
+            }
+        }
+        return true;
+    }
+    onHover(e) {
+        if (!this.isValidDropzone(e)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        this.element.classList.add("dragover");
+        this.element.style.boxShadow = this.getDraggingBoxShadow(e);
+    }
+    onDragStart(e) {
+        const source = this.parent?.contextBase?.filePath;
+        if (!source || !e.dataTransfer || !this.element.dataset.prop) {
+            return;
+        }
+        const clientRect = this.element.getBoundingClientRect();
+        e.stopPropagation();
+        this.element.classList.add("dragging");
+        e.dataTransfer.setDragImage(this.element, clientRect.width - 35, 35);
+        e.dataTransfer.effectAllowed = "move";
+        const id = Math.random().toString(36).slice(2);
+        this.element.id = id;
+        const data = {
+            index: this.element.dataset.prop,
+            sourceId: id,
+            value: this.value,
+        };
+        if (this.inputConfig?.options?.structures?.values?.length > 0) {
+            const structure = CloudCannon.findStructure(this.inputConfig?.options?.structures, this.value);
+            if (structure) {
+                e.dataTransfer.setData(`structure:${JSON.stringify(structure)}`, "");
+            }
+        }
+        const payload = JSON.stringify(data);
+        e.dataTransfer?.setData(source, payload);
+        const dragType = this.getDragType();
+        if (dragType) {
+            e.dataTransfer?.setData(dragType, payload);
+        }
+    }
+    getDragType() {
+        if (this.inputConfig?.options?.structures?.values?.length) {
+            return "cc:structure";
+        }
+        const currentArraySubtype = this.inputConfig?.options?.__array_subtype;
+        if (currentArraySubtype) {
+            return `cc:${currentArraySubtype}`;
+        }
+        const type = CloudCannon.getInputType(this.contextBase?.filePath, this.value, this.inputConfig);
+        if (type === "array" || type === "object") {
+            return undefined;
+        }
+        return `cc:${type}`;
+    }
+    getDraggingBoxShadow(e) {
+        const position = this.getDragPosition(e);
+        const arrayDirection = this.parent?.arrayDirection || "column";
+        const column = arrayDirection.startsWith("column");
+        const reversed = arrayDirection.endsWith("reverse");
+        if (column) {
+            if (reversed) {
+                if (position === "before") {
+                    return "0 3px 0 var(--ccve-color-sol)";
+                }
+                return "0 -3px 0 var(--ccve-color-sol)";
+            }
+            if (position === "before") {
+                return "0 -3px 0 var(--ccve-color-sol)";
+            }
+            return "0 3px 0 var(--ccve-color-sol)";
+        }
+        if (reversed) {
+            if (position === "before") {
+                return "3px 0 0 var(--ccve-color-sol)";
+            }
+            return "-3px 0 0 var(--ccve-color-sol)";
+        }
+        if (position === "before") {
+            return "-3px 0 0 var(--ccve-color-sol)";
+        }
+        return "3px 0 0 var(--ccve-color-sol)";
+    }
+    getDragPosition(e) {
+        const rect = this.element.getBoundingClientRect();
+        const arrayDirection = this.parent?.arrayDirection ?? "column";
+        const mousePos = arrayDirection.startsWith("row") ? e.clientX : e.clientY;
+        const elementPos = arrayDirection.startsWith("row") ? rect.left : rect.top;
+        const elementSize = arrayDirection.startsWith("row")
+            ? rect.width
+            : rect.height;
+        const relativePos = mousePos - elementPos;
+        const isInFirstHalf = relativePos < elementSize / 2;
+        const isBefore = arrayDirection.endsWith("reverse")
+            ? !isInFirstHalf
+            : isInFirstHalf;
+        return isBefore ? "before" : "after";
+    }
+    dispatchArrayMove(fromIndex, toIndex, fromSlug) {
+        this.element.dispatchEvent(new CustomEvent("cloudcannon-api", {
+            bubbles: true,
+            detail: {
+                action: "move-array-item",
+                fromSlug,
+                fromIndex,
+                toIndex,
+            },
+        }));
+    }
+    dispatchArrayRemove(fromIndex, source) {
+        this.element.dispatchEvent(new CustomEvent("cloudcannon-api", {
+            bubbles: true,
+            detail: {
+                action: "remove-array-item",
+                fromIndex,
+                source,
+            },
+        }));
+    }
+    dispatchArrayAdd(newIndex, value, sourceIndex) {
+        this.element.dispatchEvent(new CustomEvent("cloudcannon-api", {
+            bubbles: true,
+            detail: {
+                action: "add-array-item",
+                newIndex,
+                sourceIndex,
+                value,
+            },
+        }));
+    }
+    async update() {
+        await super.update();
+        this.updateControls();
+    }
+    updateControls() {
+        if (!this.controlsElement) {
+            return;
+        }
+        const arrayDirection = this.parent?.arrayDirection ?? "column";
+        const reversed = arrayDirection.endsWith("reverse");
+        this.controlsElement.arrayDirection = arrayDirection;
+        if (arrayDirection.startsWith("column")) {
+            this.controlsElement.moveBackwardText = "up";
+            this.controlsElement.moveForwardText = "down";
+        }
+        else {
+            this.controlsElement.moveBackwardText = "left";
+            this.controlsElement.moveForwardText = "right";
+        }
+        if (reversed) {
+            this.controlsElement.disableMoveBackward =
+                Number(this.element.dataset.prop) ===
+                    Number(this.element.dataset.length) - 1;
+            this.controlsElement.disableMoveForward =
+                Number(this.element.dataset.prop) === 0;
+        }
+        else {
+            this.controlsElement.disableMoveBackward =
+                Number(this.element.dataset.prop) === 0;
+            this.controlsElement.disableMoveForward =
+                Number(this.element.dataset.prop) ===
+                    Number(this.element.dataset.length) - 1;
+        }
+    }
+    mount() {
+        if (!this.controlsElement) {
+            this.controlsElement = document.createElement("editable-array-item-controls");
+            this.controlsElement.addEventListener("edit", (e) => {
+                this.dispatchEdit(this.element.dataset.prop);
+            });
+            this.controlsElement.addEventListener("add", () => {
+                const fromIndex = Number(this.element.dataset.prop);
+                const arrayDirection = this.parent?.arrayDirection ?? "column";
+                const reversed = arrayDirection.endsWith("reverse");
+                this.dispatchArrayAdd(reversed ? fromIndex - 1 : fromIndex + 1, undefined, fromIndex);
+            });
+            this.controlsElement.addEventListener("duplicate", async () => {
+                const value = await realizeAPIValue(this.value);
+                const fromIndex = Number(this.element.dataset.prop);
+                const arrayDirection = this.parent?.arrayDirection ?? "column";
+                const reversed = arrayDirection.endsWith("reverse");
+                this.dispatchArrayAdd(reversed ? fromIndex - 1 : fromIndex + 1, value, fromIndex);
+                this.controlsElement?.removeAttribute("open");
+                this.element.after(this.element.cloneNode(true));
+            });
+            this.controlsElement.addEventListener("move-backward", () => {
+                const fromIndex = Number(this.element.dataset.prop);
+                const arrayDirection = this.parent?.arrayDirection ?? "column";
+                const reversed = arrayDirection.endsWith("reverse");
+                this.dispatchArrayMove(fromIndex, reversed ? fromIndex + 1 : fromIndex - 1);
+                if (isEditableArrayItem(this.element.previousElementSibling)) {
+                    this.element.previousElementSibling?.before(this.element);
+                }
+            });
+            this.controlsElement.addEventListener("move-forward", () => {
+                const fromIndex = Number(this.element.dataset.prop);
+                const arrayDirection = this.parent?.arrayDirection ?? "column";
+                const reversed = arrayDirection.endsWith("reverse");
+                this.dispatchArrayMove(fromIndex, reversed ? fromIndex - 1 : fromIndex + 1);
+                if (isEditableArrayItem(this.element.nextElementSibling)) {
+                    this.element.nextElementSibling?.after(this.element);
+                }
+            });
+            this.controlsElement.addEventListener("delete", () => {
+                this.dispatchArrayRemove(Number(this.element.dataset.prop));
+                this.element.remove();
+            });
+            this.controlsElement.addEventListener("dragstart", (e) => this.onDragStart(e));
+            this.updateControls();
+            this.dispatchGetInputConfig().then((inputConfig) => {
+                if (!this.controlsElement) {
+                    return;
+                }
+                if (typeof inputConfig !== "object") {
+                    this.element.append(this.controlsElement);
+                    return;
+                }
+                this.controlsElement.disableReorder =
+                    inputConfig?.options?.disable_reorder ?? false;
+                this.controlsElement.disableRemove =
+                    inputConfig?.options?.disable_remove ?? false;
+                this.controlsElement.disableAdd =
+                    inputConfig?.options?.disable_add ?? false;
+                this.inputConfig = inputConfig;
+                if (this.inputConfig?.options?.structures?.values?.length > 0) {
+                    this.structureStrings =
+                        this.inputConfig.options.structures.values.map((value) => JSON.stringify(value).toLowerCase());
+                }
+                this.element.append(this.controlsElement);
+            });
+        }
+        this.element.ondragend = () => {
+            this.element.classList.remove("dragging");
+            this.element.style.boxShadow = "";
+        };
+        this.element.ondragenter = this.onHover.bind(this);
+        this.element.ondragover = this.onHover.bind(this);
+        this.element.ondragleave = (e) => {
+            if (!this.isValidDropzone(e)) {
+                return;
+            }
+            e.stopPropagation();
+            this.element.classList.remove("dragover");
+            this.element.style.boxShadow = "";
+        };
+        this.element.ondrop = (e) => {
+            if (!this.isValidDropzone(e)) {
+                return;
+            }
+            this.element.classList.remove("dragover");
+            this.element.style.boxShadow = "";
+            if (!e.dataTransfer) {
+                return;
+            }
+            const source = this.parent?.contextBase?.filePath;
+            if (!source) {
+                throw new Error("Source not found");
+            }
+            const dragType = this.getDragType();
+            const sameArrayData = e.dataTransfer.getData(source);
+            const otherArrayData = dragType
+                ? e.dataTransfer.getData(dragType)
+                : undefined;
+            const position = this.getDragPosition(e);
+            let newIndex = position === "after"
+                ? Number(this.element.dataset.prop) + 1
+                : Number(this.element.dataset.prop);
+            if (sameArrayData) {
+                const { index: fromIndex, sourceId } = JSON.parse(sameArrayData);
+                if (fromIndex < newIndex) {
+                    newIndex -= 1;
+                }
+                if (fromIndex !== newIndex) {
+                    const sourceElement = document.getElementById(sourceId);
+                    if (sourceElement) {
+                        if (position === "after") {
+                            this.element.after(sourceElement);
+                        }
+                        else {
+                            this.element.before(sourceElement);
+                        }
+                    }
+                    this.dispatchArrayMove(fromIndex, newIndex);
+                }
+            }
+            else if (otherArrayData) {
+                const { index, sourceId, value } = JSON.parse(otherArrayData);
+                const sourceElement = document.getElementById(sourceId);
+                if (sourceElement && hasEditableArrayItem(sourceElement)) {
+                    const parentValue = this.parent?.value;
+                    if (Array.isArray(parentValue)) {
+                        parentValue.splice(newIndex, 0, value);
+                    }
+                    sourceElement.dataset.prop = `${newIndex}`;
+                    const fromSlug = sourceElement.editable.parent?.contextBase?.fullPath;
+                    if (position === "after") {
+                        this.element.after(sourceElement);
+                    }
+                    else {
+                        this.element.before(sourceElement);
+                    }
+                    this.dispatchArrayMove(index, newIndex, fromSlug);
+                }
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "move";
+        };
+        if (this.value !== undefined) {
+            this.update();
+        }
+    }
+    setupListeners() {
+        super.setupListeners();
+        if (!this.element.dataset.prop) {
+            this.parent?.registerListener({
+                editable: this,
+            });
+        }
+    }
+}
+//# sourceMappingURL=editable-array-item.js.map

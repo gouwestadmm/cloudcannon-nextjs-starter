@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "./mdx-editor-styles.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* margins & spacing */
+  --margin-base: 1rem;
+  --default-margin: clamp(
+    var(--margin-base),
+    var(--margin-base) +
+    0.35svw,
+    var(--margin-base) *
+    1.75
+  );
+
+  --spacing: clamp(0.25rem, 0.25rem + 0.015svw, 0.25rem * 1.75);
+
+  /* Typography */
+  --type-min: 1rem;
+  --type-scale: 1rem;
+  --type-max: 2rem;
+  --font-size-base: clamp(
+    var(--type-min),
+    var(--type-scale) +
+    0.35svw,
+    var(--type-max)
+  );
+
+  --font-sans: var(--font-family-sans);
+  --font-serif: var(--font-family-serif);
+  --default-font-family: var(--font-family-sans);
+  --default-font-feature-settings: "liga", "clig", "calt";
+
+  --text-xs: calc(var(--font-size-base) * 0.75);
+  --text-sm: calc(var(--font-size-base) * 0.875);
+  --text-base: var(--font-size-base);
+  --text-lg: calc(var(--font-size-base) * 1.125);
+  --text-xl: calc(var(--font-size-base) * 1.35);
+  --text-2xl: calc(var(--font-size-base) * 1.5);
+  --text-3xl: calc(var(--font-size-base) * 1.875);
+  --text-4xl: calc(var(--font-size-base) * 2.25);
+  --text-5xl: calc(var(--font-size-base) * 3);
+  --text-6xl: calc(var(--font-size-base) * 3.5);
+  --text-7xl: calc(var(--font-size-base) * 4.5);
+  --text-8xl: calc(var(--font-size-base) * 5);
+  --text-9xl: calc(var(--font-size-base) * 6.5);
+
+  --container-0: 0rem;
+  --container-none: none;
+  --container-xs: calc(var(--default-margin) * 20);
+  --container-sm: calc(var(--default-margin) * 24);
+  --container-md: calc(var(--default-margin) * 28);
+  --container-lg: calc(var(--default-margin) * 32);
+  --container-xl: calc(var(--default-margin) * 36);
+  --container-2xl: calc(var(--default-margin) * 42);
+  --container-3xl: calc(var(--default-margin) * 48);
+  --container-4xl: calc(var(--default-margin) * 56);
+  --container-5xl: calc(var(--default-margin) * 64);
+  --container-6xl: calc(var(--default-margin) * 72);
+  --container-7xl: calc(var(--default-margin) * 80);
+  --container-8xl: calc(var(--default-margin) * 88);
+  --container-9xl: calc(var(--default-margin) * 96);
+  --container-full: 100%;
+  --container-min: min-content;
+  --container-max: max-content;
+  --container-fit: fit-content;
+}
+
+@layer typography {
+  .markdown {
+    --markdown-spacing-tight: calc(var(--default-margin) / 2);
+    --markdown-spacing-base: var(--default-margin);
+    --markdown-spacing-relaxed: calc(var(--default-margin) * 2);
+    --markdown-spacing-loose: calc(var(--default-margin) * 4);
+
+    & p + p {
+      margin-top: var(--markdown-spacing-relaxed);
+    }
+
+    & p + :is(h1, h2, h3, h4, h5, h6) {
+      margin-top: var(--markdown-spacing-relaxed);
+    }
+
+    & :is(h1, h2, h3, h4, h5, h6, ol, ul) + p {
+      margin-top: var(--markdown-spacing-tight);
+    }
+
+    & :is(ol, ul) {
+      margin-block: var(--markdown-spacing-base);
+    }
+
+    & :is(ol, ul) + :is(h1, h2, h3, h4, h5, h6) {
+      margin-top: var(--markdown-spacing-relaxed);
+    }
+
+    & :is(ol, ul) li + li {
+      margin-top: var(--markdown-spacing-base);
+    }
+
+    & ol ul,
+    & ul ol {
+      margin-top: var(--markdown-spacing-tight);
+    }
+
+    & :is(ol, ul) :is(ol, ul) li + li {
+      margin-top: var(--markdown-spacing-tight);
+    }
+
+    & :is(h1, h2) + :is(h3, h4, h5) {
+      margin-top: var(--markdown-spacing-tight);
+    }
+
+    & :is(img, video, iframe) {
+      margin-block: var(--markdown-spacing-relaxed);
+    }
+
+    & :is(blockquote, pre, figure) {
+      margin-block: var(--markdown-spacing-relaxed);
+    }
+
+    & hr {
+      margin-block: var(--markdown-spacing-loose);
+    }
+
+    & :is(table, details) {
+      margin-block: var(--markdown-spacing-relaxed);
+    }
+  }
+}
