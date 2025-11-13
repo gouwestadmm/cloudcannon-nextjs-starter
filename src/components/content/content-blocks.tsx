@@ -3,7 +3,7 @@
 import { getComponent } from "@/lib/component-registry";
 
 type BlockComponent = {
-  type: string;
+  _type: string;
   section: {
     uuid?: string;
   };
@@ -17,7 +17,7 @@ type RenderBlockProps = {
 };
 
 function RenderBlock({ block, index }: RenderBlockProps) {
-  const TargetComponent = getComponent(block.type);
+  const TargetComponent = getComponent(block._type);
   const props = block;
 
   if (!TargetComponent) {
@@ -26,9 +26,9 @@ function RenderBlock({ block, index }: RenderBlockProps) {
 
   return (
     <div
-      data-component={block.type}
+      data-component={block._type}
       data-editable="array-item"
-      data-id={block.type}
+      data-id={block._type}
     >
       <TargetComponent index={index} {...props} />
     </div>
@@ -42,7 +42,7 @@ type BlocksProps = {
 
 export function Blocks({ content_blocks }: BlocksProps) {
   return (
-    <div data-editable="array" data-id-key="type" data-prop="content_blocks">
+    <div data-editable="array" data-id-key="_type" data-prop="content_blocks">
       {content_blocks.map((block, index) => (
         <RenderBlock
           block={block}

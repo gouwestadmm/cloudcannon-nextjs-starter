@@ -6,8 +6,13 @@ import yaml from "yaml";
 import { z } from "zod";
 
 // Read CloudCannon config
-const cloudcannonConfigPath = path.join(process.cwd(), "cloudcannon.config.yml");
-const cloudcannonConfig = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
+const cloudcannonConfigPath = path.join(
+  process.cwd(),
+  "cloudcannon.config.yml"
+);
+const cloudcannonConfig = yaml.parse(
+  fs.readFileSync(cloudcannonConfigPath, "utf8")
+);
 
 // ============================================================================
 // Content Block Types (Auto-generated from CloudCannon config)
@@ -111,25 +116,46 @@ export type LogoGridBlock = {
   logos?: any[];
 };
 
-export type ContentBlocks = HeaderBlock | IntroBlock | CtaBlock | ImageBlockBlock | ImageWithContentBlock | MixedContentBlock | FeatureListBlock | FeaturesBlock | LogoGridBlock;
+export type ContentBlocks =
+  | HeaderBlock
+  | IntroBlock
+  | CtaBlock
+  | ImageBlockBlock
+  | ImageWithContentBlock
+  | MixedContentBlock
+  | FeatureListBlock
+  | FeaturesBlock
+  | LogoGridBlock;
 
 // ============================================================================
 // Collection Definitions
 // ============================================================================
 
 // Extract markdown fields from _inputs configuration
-const markdownFields = new Set<string>(["title", "subtitle", "introduction", "content", "summary"]);
+const markdownFields = new Set<string>([
+  "title",
+  "subtitle",
+  "introduction",
+  "content",
+  "summary",
+]);
 
 /**
  * Process markdown fields within objects and arrays
  */
-async function processMarkdownFields(obj: any, context: any, baseMeta: any): Promise<any> {
+async function processMarkdownFields(
+  obj: any,
+  context: any,
+  baseMeta: any
+): Promise<any> {
   if (!obj || typeof obj !== "object") {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return Promise.all(obj.map((item) => processMarkdownFields(item, context, baseMeta)));
+    return Promise.all(
+      obj.map((item) => processMarkdownFields(item, context, baseMeta))
+    );
   }
 
   const processed: any = {};
@@ -165,25 +191,32 @@ const pages = defineCollection({
   name: "pages",
   directory: "content/pages",
   include: "**/*.mdx",
-  schema: z.object({
-    _schema: z.any().optional(),
-    title: z.string().optional().nullish(),
-    subtitle: z.string().optional().nullish(),
-    introduction: z.string().optional().nullish(),
-    featured_image: z.string().optional().nullish(),
-    featured_image_alt: z.string().optional().nullish(),
-    published: z.boolean().optional(),
-    seo_title: z.any().optional(),
-    seo_description: z.any().optional(),
-    content: z.string(),
-  }).passthrough(),
+  schema: z
+    .object({
+      _schema: z.any().optional(),
+      title: z.string().optional().nullish(),
+      subtitle: z.string().optional().nullish(),
+      introduction: z.string().optional().nullish(),
+      featured_image: z.string().optional().nullish(),
+      featured_image_alt: z.string().optional().nullish(),
+      published: z.boolean().optional(),
+      seo_title: z.any().optional(),
+      seo_description: z.any().optional(),
+      content: z.string(),
+    })
+    .passthrough(),
   transform: async (document: any, context: any) => {
     const mdx = await compileMDX(context, document);
     const slug = document._meta.path === "index" ? "" : document._meta.path;
-    
-    const content_blocks = document.content_blocks && Array.isArray(document.content_blocks)
-      ? await processMarkdownFields(document.content_blocks, context, document._meta)
-      : document.content_blocks;
+
+    const content_blocks =
+      document.content_blocks && Array.isArray(document.content_blocks)
+        ? await processMarkdownFields(
+            document.content_blocks,
+            context,
+            document._meta
+          )
+        : document.content_blocks;
 
     return {
       ...document,
@@ -198,29 +231,36 @@ const posts = defineCollection({
   name: "posts",
   directory: "content/posts",
   include: "**/*.mdx",
-  schema: z.object({
-    _schema: z.any().optional(),
-    title: z.string().optional().nullish(),
-    subtitle: z.string().optional().nullish(),
-    summary: z.string().optional().nullish(),
-    date: z.coerce.date().optional(),
-    author: z.string().optional().nullish(),
-    featured_image: z.string().optional().nullish(),
-    featured_image_alt: z.string().optional().nullish(),
-    published: z.boolean().optional(),
-    seo_title: z.any().optional(),
-    seo_description: z.any().optional(),
-    tags: z.array(z.any()).optional(),
-    categories: z.array(z.any()).optional(),
-    content: z.string(),
-  }).passthrough(),
+  schema: z
+    .object({
+      _schema: z.any().optional(),
+      title: z.string().optional().nullish(),
+      subtitle: z.string().optional().nullish(),
+      summary: z.string().optional().nullish(),
+      date: z.coerce.date().optional(),
+      author: z.string().optional().nullish(),
+      featured_image: z.string().optional().nullish(),
+      featured_image_alt: z.string().optional().nullish(),
+      published: z.boolean().optional(),
+      seo_title: z.any().optional(),
+      seo_description: z.any().optional(),
+      tags: z.array(z.any()).optional(),
+      categories: z.array(z.any()).optional(),
+      content: z.string(),
+    })
+    .passthrough(),
   transform: async (document: any, context: any) => {
     const mdx = await compileMDX(context, document);
     const slug = document._meta.path;
-    
-    const content_blocks = document.content_blocks && Array.isArray(document.content_blocks)
-      ? await processMarkdownFields(document.content_blocks, context, document._meta)
-      : document.content_blocks;
+
+    const content_blocks =
+      document.content_blocks && Array.isArray(document.content_blocks)
+        ? await processMarkdownFields(
+            document.content_blocks,
+            context,
+            document._meta
+          )
+        : document.content_blocks;
 
     return {
       ...document,
