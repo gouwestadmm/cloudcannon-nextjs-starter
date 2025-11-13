@@ -1,0 +1,67 @@
+---
+title: Next.js Needs More Love (And I'm Here to Fix That)
+summary: >-
+  After 10 years of watching Jekyll get all the CloudCannon attention, I decided it was time Next.js had its moment in the spotlight. Here's a starter that makes CloudCannon + Next.js actually fun.
+date: 2025-11-13T00:00:00Z
+author:
+tags:
+  - cloudcannon
+  - nextjs
+  - humor
+---
+
+Look, I love Jekyll. I really do. But after 10 years of CloudCannon projects, I started to feel like Next.js was the middle child nobody talks about at family dinners. Sure, it's there, it works, but does anyone ever say "wow, look at Next.js go!"?
+
+So I built a starter to fix that.
+
+##### The Problem with Next.js + CloudCannon
+
+Setting up Next.js with CloudCannon isn't hard—it's just... repetitive. Like, really repetitive. You write your CloudCannon schemas. Then you write your content-collections types. Then you realize you forgot to add a field. Then you update the schema. Then you update the types. Then you question your life choices.
+
+It's like doing laundry—necessary, but nobody's excited about it.
+
+##### What This Starter Actually Does
+
+Think of it as a very helpful robot that reads your CloudCannon config and just... does the boring stuff for you:
+
+- **Schemas → Types**: Write your CloudCannon schema once. The scaffolding script generates all the TypeScript types automatically.
+- **Markdown → MDX**: Mark a field as markdown in CloudCannon. Boom, it's compiled to MDX with React component support. Editors type markdown, developers get components.
+- **Blocks → Editable**: Create a new block component, register it, add it to the config. Visual editing just works.
+
+The script runs automatically before dev and build. Change your schema, start the dev server, everything's in sync. No manual updates, no copy-paste, no forgetting to update things in three different places.
+
+##### The Setup Takes Like 5 Minutes
+
+```bash
+pnpm install
+pnpm run dev
+```
+
+That's it. Open `localhost:3000` and you've got:
+- A working homepage with editable blocks
+- Blog posts ready to go
+- Visual editing that actually works
+- Hot reload that doesn't make you wait
+
+##### Real Talk: Why This Matters
+
+I've built dozens of CloudCannon sites over the years. The setup phase always felt like a tax you pay before getting to the fun part. This starter skips that tax.
+
+You get:
+- **Content Collections** for fast HMR during development
+- **React 19** because why not use the new stuff
+- **Tailwind 4** with fluid typography that actually scales nicely
+- **Turbopack** for builds that don't make you take a coffee break
+- **Ultracite** (Biome) so you never think about formatting again
+
+##### Try It Out
+
+The whole thing is on GitHub, MIT licensed, ready to fork and customize. It's opinionated—I made choices so you don't have to—but it's flexible where it matters.
+
+[Check it out on GitHub](https://github.com/gouwestadmm/cloudcannon-nextjs-starter)
+
+And hey, if you use it and build something cool, let me know. Next.js deserves more love, and I'm determined to make it happen one CloudCannon site at a time.
+
+---
+
+P.S. Jekyll folks, I still love you. You're like that reliable friend who always shows up on time. Next.js is just that other friend who brings snacks and knows how to fix your WiFi.

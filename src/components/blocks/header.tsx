@@ -44,7 +44,7 @@ export default function Header(props: HeaderBlock) {
             alt="header image"
             className=""
             data-editable="image"
-            data-prop="image"
+            data-prop-src="image"
             fill
             src={block.image || "/header-placeholder.jpg"}
           />
