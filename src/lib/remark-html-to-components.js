@@ -26,5 +26,6 @@ export default function remarkHtmlToComponents() {
         );
       }
     });
+    return tree;
   };
 }
