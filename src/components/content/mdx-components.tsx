@@ -40,7 +40,7 @@ export const components = {
         alt={props.alt || ""}
         className=""
         height={props.height}
-        image={props.src}
+        src={props.src}
         width={props.width}
         {...props}
       />
