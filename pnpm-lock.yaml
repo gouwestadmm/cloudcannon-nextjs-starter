@@ -59,6 +59,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.16)
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.0.0
       yaml:
         specifier: ^2.8.1
         version: 2.8.1
