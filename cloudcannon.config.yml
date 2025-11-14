@@ -373,8 +373,55 @@ _structures:
           text:
           url:
           variant: primary
+_editables:
+  content:
+    allow_custom_markup: true
+    remove_custom_markup: false
+    blockquote: true
+    bold: true
+    bulletedlist: true
+    center:
+    code: true
+    copyformatting: true
+    embed: true
+    expandable: true
+    format: p, h1, h2, h3, h4, h5, h6, pre, address, div
+    height: 1600
+    horizontalrule: true
+    image: true
+    image_size_attributes: true
+    indent: true
+    italic: true
+    justify:
+    left:
+    link: true
+    mime_type:
+    numberedlist: true
+    outdent: true
+    paths:
+    redo: true
+    removeformat: true
+    resize_style:
+    right: true
+    snippet:
+    strike: true
+    styles: true
+    subscript: true
+    superscript: true
+    table: true
+    underline: true
+    undo: true
+    width: 2200
+  image:
+    expandable:
+    height: 1755
+    image_size_attributes: true
+    mime_type:
+    paths:
+    resize_style: contain
+    width: 2400
 editor:
-  default_path: /content/pages
+  default_path:
 timezone: Europe/Amsterdam
 markdown:
   engine: commonmark
