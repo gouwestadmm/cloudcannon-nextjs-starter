@@ -35,20 +35,12 @@ function toPascalCase(str) {
  * Extract all markdown fields from CloudCannon _inputs configuration
  */
 function getMarkdownFields(config) {
-  const markdownFields = new Set();
   const inputs = config._inputs || {};
-
-  for (const [key, inputConfig] of Object.entries(inputs)) {
-    if (
-      typeof inputConfig === "object" &&
-      inputConfig !== null &&
-      (inputConfig.type === "markdown" || inputConfig.type === "textarea")
-    ) {
-      markdownFields.add(key);
-    }
-  }
-
-  return markdownFields;
+  return new Set(
+    Object.entries(inputs)
+      .filter(([, cfg]) => cfg?.type === "markdown" || cfg?.type === "textarea")
+      .map(([key]) => key)
+  );
 }
 
 // ============================================================================
@@ -70,7 +62,7 @@ const ZOD_TYPE_MAP = {
 /**
  * Generate Zod schema string for a CloudCannon input type
  */
-function getZodSchema(_key, inputConfig) {
+function getZodSchema(_key, inputConfig, config) {
   if (!inputConfig?.type) {
     return "z.any().optional()";
   }
@@ -83,9 +75,20 @@ function getZodSchema(_key, inputConfig) {
   }
 
   // Handle select with enum values
-  if ((type === "select" || type === "choice") && options.values?.length > 0) {
-    const enumValues = options.values.map((v) => `"${v}"`).join(", ");
-    return `z.enum([${enumValues}]).optional()`;
+  if (type === "select" || type === "choice") {
+    let values = options.values;
+
+    // Resolve string reference to _select_data (CloudCannon convention)
+    if (typeof values === "string" && values.startsWith("_select_data.")) {
+      const selectKey = values.split(".").slice(1).join(".");
+      values = config?._select_data?.[selectKey];
+    }
+
+    if (Array.isArray(values) && values.length > 0) {
+      const enumValues = values.map((v) => `"${v}"`).join(", ");
+      return `z.enum([${enumValues}]).optional()`;
+    }
+    // fallthrough to default string if we couldn't resolve values
   }
 
   // Default to string for text, markdown, image, url, etc.
@@ -132,7 +135,6 @@ function generateStructureType(structure, markdownFields) {
       continue;
     }
 
-    // Infer type
     let fieldType = "string";
     if (Array.isArray(value)) {
       fieldType = "any[]";
@@ -142,7 +144,6 @@ function generateStructureType(structure, markdownFields) {
 
     fields.push(`  ${key}?: ${fieldType};`);
 
-    // Add MDX variant if it's a markdown field
     if (markdownFields.has(key)) {
       fields.push(`  ${key}_mdx?: any;`);
     }
@@ -158,8 +159,6 @@ function generateStructureTypes(config) {
   const structures = config._structures || {};
   const markdownFields = getMarkdownFields(config);
   const types = [];
-
-  // Generate types for all structures
   const structureTypesByName = new Map();
 
   for (const [structureName, structureConfig] of Object.entries(structures)) {
@@ -167,29 +166,22 @@ function generateStructureTypes(config) {
       continue;
     }
 
-    const structureBlocks = [];
-
-    for (const structure of structureConfig.values) {
-      if (structure.value?._type) {
-        // This is a content block with _type
+    const structureBlocks = structureConfig.values
+      .filter((structure) => structure.value?._type)
+      .map((structure) => {
         types.push(generateStructureType(structure, markdownFields));
-        const typeName = `${toPascalCase(structure.value._type)}Block`;
-        structureBlocks.push(typeName);
-      }
-    }
+        return `${toPascalCase(structure.value._type)}Block`;
+      });
 
-    // Store block types for this structure (only if it has _type blocks)
     if (structureBlocks.length > 0) {
       structureTypesByName.set(structureName, structureBlocks);
     }
   }
 
-  // Generate union types dynamically based on structure names
-  const unions = [];
-  for (const [structureName, typeNames] of structureTypesByName.entries()) {
-    const unionName = toPascalCase(structureName);
-    unions.push(`export type ${unionName} = ${typeNames.join(" | ")};`);
-  }
+  const unions = Array.from(structureTypesByName.entries()).map(
+    ([structureName, typeNames]) =>
+      `export type ${toPascalCase(structureName)} = ${typeNames.join(" | ")};`
+  );
 
   return {
     types: types.join("\n\n"),
@@ -202,42 +194,21 @@ function generateStructureTypes(config) {
 // ============================================================================
 
 /**
- * Generate slug logic for a collection
+ * Generate slug and fullSlug computation logic for a collection
  */
 function generateSlugLogic(collectionConfig) {
-  const urlPattern = collectionConfig.url;
-
-  if (!urlPattern) {
-    return "document._meta.path";
-  }
-
-  // For pages collection with [full_slug] pattern
-  if (urlPattern === "[full_slug]") {
-    return 'document._meta.path === "index" ? "" : document._meta.path';
-  }
-
-  // For blog posts with /blog/[slug]/ pattern
-  if (urlPattern.includes("[slug]")) {
-    return "document._meta.path";
-  }
-
-  return "document._meta.path";
+  const folder = collectionConfig.path?.split("/").pop() || "";
+  return `
+    const slug = document._meta.path === "index" ? "" : document._meta.path;
+    const fullSlug = "/${folder}/" + document._meta.path;`;
 }
 
 /**
  * Get schema fields from first schema in collection
  */
 function getFirstSchemaFields(collectionConfig) {
-  if (!collectionConfig.schemas) {
-    return [];
-  }
-
-  const firstSchema = Object.values(collectionConfig.schemas)[0];
-  if (!firstSchema?.path) {
-    return [];
-  }
-
-  return getSchemaFields(firstSchema.path);
+  const firstSchema = Object.values(collectionConfig.schemas || {})[0];
+  return firstSchema?.path ? getSchemaFields(firstSchema.path) : [];
 }
 
 /**
@@ -245,10 +216,10 @@ function getFirstSchemaFields(collectionConfig) {
  */
 function generateSchemaFieldDefs(schemaFields, config) {
   return schemaFields
-    .map((key) => {
-      const zodType = getZodSchema(key, config._inputs?.[key]);
-      return `    ${key}: ${zodType},`;
-    })
+    .map(
+      (key) =>
+        `    ${key}: ${getZodSchema(key, config._inputs?.[key], config)},`
+    )
     .join("\n");
 }
 
@@ -275,8 +246,8 @@ ${schemaFieldDefs}
     content: z.string(),
   }).passthrough(),
   transform: async (document: any, context: any) => {
-    const mdx = await compileMDX(context, document);
-    const slug = ${slugLogic};
+    const mdx = await compileMDX(context, document, { remarkPlugins: [remarkHtmlToComponents] });
+${slugLogic}
     
     const content_blocks = document.content_blocks && Array.isArray(document.content_blocks)
       ? await processMarkdownFields(document.content_blocks, context, document._meta)
@@ -285,6 +256,7 @@ ${schemaFieldDefs}
     return {
       ...document,
       slug,
+      fullSlug,
       mdx,
       content_blocks,
     };
@@ -298,28 +270,10 @@ ${schemaFieldDefs}
  */
 function generateAllCollections(config) {
   const collectionsConfig = config.collections_config || {};
-  const collections = [];
-
-  for (const [collectionName, collectionConfig] of Object.entries(
-    collectionsConfig
-  )) {
-    // Skip data collections
-    if (collectionName === "data") {
-      continue;
-    }
-
-    const collection = generateCollection(
-      collectionName,
-      collectionConfig,
-      config
-    );
-
-    if (collection) {
-      collections.push(collection);
-    }
-  }
-
-  return collections;
+  return Object.entries(collectionsConfig)
+    .filter(([name]) => name !== "data")
+    .map(([name, cfg]) => generateCollection(name, cfg, config))
+    .filter(Boolean);
 }
 
 // ============================================================================
@@ -337,7 +291,6 @@ function generateOutputFile(config) {
   const markdownFieldsList = Array.from(markdownFields)
     .map((f) => `"${f}"`)
     .join(", ");
-
   const collectionNames = collections.map((c) => c.name).join(", ");
   const collectionDefs = collections.map((c) => c.definition).join("\n\n");
 
@@ -345,6 +298,7 @@ function generateOutputFile(config) {
 import path from "node:path";
 import { defineCollection, defineConfig } from "@content-collections/core";
 import { compileMDX } from "@content-collections/mdx";
+import remarkHtmlToComponents from "@/lib/remark-html-to-components.js";
 import yaml from "yaml";
 import { z } from "zod";
 
@@ -381,6 +335,8 @@ async function processMarkdownFields(obj: any, context: any, baseMeta: any): Pro
 
   const processed: any = {};
   for (const [key, value] of Object.entries(obj)) {
+    processed[key] = value;
+
     if (typeof value === "string" && markdownFields.has(key)) {
       try {
         const tempDoc = {
@@ -391,18 +347,12 @@ async function processMarkdownFields(obj: any, context: any, baseMeta: any): Pro
             fileName: \`\${key}.mdx\`,
           },
         };
-
-        const mdx = await compileMDX(context, tempDoc);
-        processed[key] = value;
-        processed[\`\${key}_mdx\`] = mdx;
+        processed[\`\${key}_mdx\`] = await compileMDX(context, tempDoc, { remarkPlugins: [remarkHtmlToComponents] });
       } catch {
-        processed[key] = value;
         processed[\`\${key}_mdx\`] = null;
       }
     } else if (value && typeof value === "object") {
       processed[key] = await processMarkdownFields(value, context, baseMeta);
-    } else {
-      processed[key] = value;
     }
   }
   return processed;
@@ -423,10 +373,9 @@ export default defineConfig({
 function main() {
   try {
     const config = loadCloudCannonConfig();
-    const outputContent = generateOutputFile(config);
     const outputPath = path.join(process.cwd(), "content-collections.ts");
 
-    fs.writeFileSync(outputPath, outputContent, "utf8");
+    fs.writeFileSync(outputPath, generateOutputFile(config), "utf8");
 
     const collections = generateAllCollections(config);
     const structureTypes = generateStructureTypes(config);

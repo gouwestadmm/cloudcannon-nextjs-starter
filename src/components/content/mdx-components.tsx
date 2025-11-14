@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   H1,
   H2,
@@ -33,13 +34,13 @@ export const components = {
       {...props}
     />
   ),
-  Image: ({ className, ...props }) => (
-    <div className="lg:col-start-3 lg:col-end-13">
+  Img: ({ className, ...props }) => (
+    <div className="my-6 overflow-clip rounded-3xl lg:my-12">
       <Image
         alt={props.alt || ""}
-        className="my-6 rounded-3xl lg:my-12"
+        className=""
         height={props.height}
-        image={props.src}
+        src={props.src}
         width={props.width}
         {...props}
       />
