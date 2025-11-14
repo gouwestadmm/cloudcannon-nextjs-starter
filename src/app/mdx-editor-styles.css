@@ -1,21 +1,21 @@
 .cms-editor-active .markdown {
   h1 {
-    @apply break-normal tracking-tight antialiased text-balance font-semibold text-6xl leading-[0.9]! xl:text-7xl mx-auto max-w-2xl;
+    @apply break-normal antialiased text-balance font-semibold text-6xl leading-[0.9]! tracking-tighter xl:text-7xl mx-auto max-w-2xl;
   }
   h2 {
-    @apply break-normal tracking-tight antialiased text-balance font-bold text-5xl leading-[0.95] xl:text-6xl mx-auto max-w-2xl;
+    @apply break-normal antialiased text-balance font-bold text-5xl leading-[0.95] tracking-tight xl:text-6xl mx-auto max-w-2xl;
   }
   h3 {
-    @apply break-normal tracking-tight antialiased text-balance font-medium text-3xl leading-[0.98] xl:text-4xl;
+    @apply break-normal antialiased text-balance font-medium text-3xl leading-[0.98] tracking-tight xl:text-4xl;
   }
   h4 {
-    @apply break-normal tracking-tight antialiased text-balance text-2xl tracking-tight;
+    @apply break-normal antialiased text-balance text-2xl tracking-tight;
   }
   h5 {
-    @apply break-normal tracking-tight antialiased text-balance font-bold text-2xl tracking-tight;
+    @apply break-normal antialiased text-balance font-bold text-2xl tracking-tight;
   }
   h6 {
-    @apply break-normal tracking-tight antialiased text-pretty text-xl leading-tight;
+    @apply break-normal antialiased text-pretty text-xl leading-tight tracking-tight;
   }
   p {
     @apply text-pretty font-normal tracking-[-0.02em] antialiased text-base leading-normal;
@@ -27,10 +27,10 @@
     @apply my-6 rounded-3xl lg:my-12;
   }
   ul {
-    @apply mx-auto my-3 list-disc space-y-2 pl-5 text-2xl lg:col-start-5 lg:col-end-13;
+    @apply mx-auto list-disc text-base;
   }
   ol {
-    @apply mx-auto mt-3 max-w-2xl list-decimal text-2xl lg:col-start-5 lg:col-end-13;
+    @apply mx-auto list-decimal text-base;
   }
   blockquote {
     @apply !border-0 relative my-6 mt-3 lg:col-start-2 lg:col-end-11 xl:my-8;
@@ -39,6 +39,6 @@
     @apply mx-auto my-8 max-w-2xl border-stone-100 border-t-2 lg:col-start-5 lg:col-end-13;
   }
   div {
-    @apply my-3 lg:col-start-5 lg:col-end-13;
+    @apply my-6 lg:col-start-5 lg:col-end-13;
   }
 }

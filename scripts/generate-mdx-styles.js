@@ -6,11 +6,22 @@
  * This script:
  * 1. Parses the typography components to extract CVA variants and base styles
  * 2. Parses the mdx-components.tsx file to extract additional className values
- * 3. Combines these styles to generate complete CSS with @apply directives
+ * 3. Uses cn() utility (inlined) to properly merge and deduplicate classes
+ * 4. Combines these styles to generate complete CSS with @apply directives
  */
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Inline version of cn() from utils.ts
+ * Merges Tailwind classes intelligently, handling conflicts and deduplication
+ */
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
 const MDX_COMPONENTS_PATH = join(
   process.cwd(),
@@ -86,47 +97,23 @@ function extractTypographyStyles(content) {
  */
 function extractClassNames(content) {
   const componentStyles = {};
-
-  // Split into individual component definitions
   const componentMatches = content.matchAll(COMPONENT_REGEX);
 
   for (const match of componentMatches) {
     const [fullMatch, componentName] = match;
 
-    // Skip if component name is too generic or capitalized (custom components)
+    // Skip capitalized component names (custom components)
     if (!componentName || componentName[0] === componentName[0].toUpperCase()) {
       continue;
     }
 
-    // Try to extract className - handle different patterns
-    let className = null;
+    // Extract className from either pattern
+    const className =
+      fullMatch.match(SIMPLE_CLASS_REGEX)?.[1] ||
+      fullMatch.match(CN_CLASS_REGEX)?.[1];
 
-    // Pattern 1: Simple className="..."
-    const simpleMatch = fullMatch.match(SIMPLE_CLASS_REGEX);
-    if (simpleMatch) {
-      className = simpleMatch[1];
-    }
-
-    // Pattern 2: className={cn("...", ...)} - extract first string
-    const cnMatch = fullMatch.match(CN_CLASS_REGEX);
-    if (cnMatch) {
-      className = cnMatch[1];
-    }
-
-    if (className?.trim() && className !== "") {
-      // Clean up the className - remove excessive whitespace and problematic patterns
-      const cleanedClassName = className
-        .replace(/\s+/g, " ")
-        .trim()
-        // Remove complex selectors that won't work in @apply
-        .replace(/\[&[^\]]*\]/g, "")
-        // Remove deeply nested arbitrary values
-        .replace(/\[[^\]]*\([^)]*\)[^\]]*\]/g, "")
-        .trim();
-
-      if (cleanedClassName && cleanedClassName.length > 0) {
-        componentStyles[componentName] = cleanedClassName;
-      }
+    if (className?.trim()) {
+      componentStyles[componentName] = className;
     }
   }
 
@@ -137,23 +124,12 @@ function extractClassNames(content) {
  * Generate CSS with @apply directives for CloudCannon editor
  */
 function generateCSS(componentStyles) {
-  const css = `.cms-editor-active .markdown {
-${Object.entries(componentStyles)
-  .map(([tag, classes]) => {
-    // Skip if no valid classes
-    if (!classes || classes === '""' || classes === "''") {
-      return null;
-    }
+  const rules = Object.entries(componentStyles)
+    .filter(([, classes]) => classes)
+    .map(([tag, classes]) => `  ${tag} {\n    @apply ${classes};\n  }`)
+    .join("\n");
 
-    // Generate CSS rule
-    return `  ${tag} {\n    @apply ${classes};\n  }`;
-  })
-  .filter(Boolean)
-  .join("\n")}
-}
-`;
-
-  return css;
+  return `.cms-editor-active .markdown {\n${rules}\n}\n`;
 }
 
 /**
@@ -178,17 +154,17 @@ async function main() {
     );
     const mdxComponentStyles = extractClassNames(mdxContent);
 
-    // Merge styles: typography base + mdx additions
-    const componentStyles = { ...typographyStyles };
+    // Merge and normalize all styles using cn()
+    const componentStyles = {};
+    const allTags = new Set([
+      ...Object.keys(typographyStyles),
+      ...Object.keys(mdxComponentStyles),
+    ]);
 
-    for (const [tag, mdxClasses] of Object.entries(mdxComponentStyles)) {
-      if (componentStyles[tag]) {
-        // Combine typography base styles with MDX additions
-        componentStyles[tag] = `${componentStyles[tag]} ${mdxClasses}`.trim();
-      } else {
-        // Use MDX styles only
-        componentStyles[tag] = mdxClasses;
-      }
+    for (const tag of allTags) {
+      const typographyClasses = typographyStyles[tag] || "";
+      const mdxClasses = mdxComponentStyles[tag] || "";
+      componentStyles[tag] = cn(typographyClasses, mdxClasses);
     }
 
     if (Object.keys(componentStyles).length === 0) {
