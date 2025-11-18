@@ -1,17 +1,36 @@
 #!/usr/bin/env node
 
-const fs = require("node:fs");
-const path = require("node:path");
-const yaml = require("yaml");
-const matter = require("gray-matter");
+import fs from "node:fs";
+import path from "node:path";
+import {
+  type CollectionConfig,
+  type Configuration,
+  ConfigurationSchema,
+  InputSchema,
+  type StructureValue,
+} from "@cloudcannon/configuration-types";
+import matter from "gray-matter";
+import yaml from "yaml";
 
 // ============================================================================
 // Configuration Loading
 // ============================================================================
 
-function loadCloudCannonConfig() {
+function loadCloudCannonConfig(): Configuration {
   const configPath = path.join(process.cwd(), "cloudcannon.config.yml");
-  return yaml.parse(fs.readFileSync(configPath, "utf8"));
+  const rawConfig = yaml.parse(fs.readFileSync(configPath, "utf8"));
+
+  // Validate against official CloudCannon schema
+  const result = ConfigurationSchema.passthrough().safeParse(rawConfig);
+  if (!result.success) {
+    console.warn("Warning: Configuration validation found some issues:");
+    console.warn(result.error.format());
+    console.warn("\nProceeding with the configuration anyway...\n");
+    // Return raw config as fallback, cast to Configuration type
+    return rawConfig as Configuration;
+  }
+
+  return result.data;
 }
 
 // ============================================================================
@@ -20,7 +39,7 @@ function loadCloudCannonConfig() {
 
 const PASCAL_CASE_REGEX = /[-_]/;
 
-function toPascalCase(str) {
+function toPascalCase(str: string): string {
   return str
     .split(PASCAL_CASE_REGEX)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -34,11 +53,25 @@ function toPascalCase(str) {
 /**
  * Extract all markdown fields from CloudCannon _inputs configuration
  */
-function getMarkdownFields(config) {
+function getMarkdownFields(config: Configuration): Set<string> {
   const inputs = config._inputs || {};
   return new Set(
     Object.entries(inputs)
-      .filter(([, cfg]) => cfg?.type === "markdown" || cfg?.type === "textarea")
+      .filter(([, cfg]) => {
+        // Handle raw config that might not validate perfectly
+        if (!cfg || typeof cfg !== "object") {
+          return false;
+        }
+
+        // Check if it has a type property that indicates markdown or textarea
+        const hasType = "type" in cfg;
+        if (!hasType) {
+          return false;
+        }
+
+        const type = (cfg as { type: unknown }).type;
+        return type === "markdown" || type === "textarea";
+      })
       .map(([key]) => key)
   );
 }
@@ -47,9 +80,11 @@ function getMarkdownFields(config) {
 // Zod Schema Generation
 // ============================================================================
 
-const ZOD_TYPE_MAP = {
+/**
+ * Map of CloudCannon input types to their corresponding Zod schema strings
+ */
+const INPUT_TYPE_TO_ZOD: Record<string, string> = {
   checkbox: "z.boolean().optional()",
-  switch: "z.boolean().optional()",
   number: "z.number().optional()",
   range: "z.number().optional()",
   date: "z.coerce.date().optional()",
@@ -60,35 +95,68 @@ const ZOD_TYPE_MAP = {
 };
 
 /**
- * Generate Zod schema string for a CloudCannon input type
+ * Handle select/choice input types with enum values
  */
-function getZodSchema(_key, inputConfig, config) {
-  if (!inputConfig?.type) {
+function getSelectZodSchema(
+  input: unknown,
+  config: Configuration
+): string | null {
+  const options =
+    input && typeof input === "object" && "options" in input
+      ? input.options
+      : undefined;
+  let values =
+    options && typeof options === "object" && "values" in options
+      ? options.values
+      : undefined;
+
+  // Resolve string reference to _select_data (CloudCannon convention)
+  if (typeof values === "string" && values.startsWith("_select_data.")) {
+    const selectKey = values.split(".").slice(1).join(".");
+    values = config?._select_data?.[selectKey];
+  }
+
+  if (Array.isArray(values) && values.length > 0) {
+    const enumValues = values.map((v: unknown) => `"${String(v)}"`).join(", ");
+    return `z.enum([${enumValues}]).optional()`;
+  }
+
+  return null;
+}
+
+/**
+ * Generate Zod schema string for a CloudCannon input type
+ * Uses official CloudCannon input type definitions
+ */
+function getZodSchema(
+  _key: string,
+  inputConfig: unknown,
+  config: Configuration
+): string {
+  const parsed = InputSchema.safeParse(inputConfig);
+
+  if (!parsed.success) {
     return "z.any().optional()";
   }
 
-  const { type, options = {} } = inputConfig;
+  const data = parsed.data;
 
-  // Check mapped types first
-  if (ZOD_TYPE_MAP[type]) {
-    return ZOD_TYPE_MAP[type];
+  if (!("type" in data)) {
+    return "z.any().optional()";
   }
 
-  // Handle select with enum values
+  const type = data.type;
+
+  // Check if we have a direct mapping
+  if (type in INPUT_TYPE_TO_ZOD) {
+    return INPUT_TYPE_TO_ZOD[type];
+  }
+
+  // Handle select/choice with enum values
   if (type === "select" || type === "choice") {
-    let values = options.values;
-
-    // Resolve string reference to _select_data (CloudCannon convention)
-    if (typeof values === "string" && values.startsWith("_select_data.")) {
-      const selectKey = values.split(".").slice(1).join(".");
-      values = config?._select_data?.[selectKey];
-    }
-
-    if (Array.isArray(values) && values.length > 0) {
-      const enumValues = values.map((v) => `"${v}"`).join(", ");
-      return `z.enum([${enumValues}]).optional()`;
-    }
-    // fallthrough to default string if we couldn't resolve values
+    return (
+      getSelectZodSchema(data, config) || "z.string().optional().nullish()"
+    );
   }
 
   // Default to string for text, markdown, image, url, etc.
@@ -102,7 +170,7 @@ function getZodSchema(_key, inputConfig, config) {
 /**
  * Read schema file and extract field names
  */
-function getSchemaFields(schemaPath) {
+function getSchemaFields(schemaPath: string): string[] {
   const fullPath = path.join(process.cwd(), schemaPath);
 
   if (!fs.existsSync(fullPath)) {
@@ -126,19 +194,23 @@ function getSchemaFields(schemaPath) {
 /**
  * Generate TypeScript type for a structure value
  */
-function generateStructureType(structure, markdownFields) {
-  const typeName = `${toPascalCase(structure.value._type)}Block`;
-  const fields = [`  _type: "${structure.value._type}";`];
+function generateStructureType(
+  structure: StructureValue,
+  markdownFields: Set<string>
+): string {
+  const value = structure.value as Record<string, unknown>;
+  const typeName = `${toPascalCase(String(value._type))}Block`;
+  const fields = [`  _type: "${String(value._type)}";`];
 
-  for (const [key, value] of Object.entries(structure.value)) {
+  for (const [key, fieldValue] of Object.entries(value)) {
     if (key === "_type") {
       continue;
     }
 
     let fieldType = "string";
-    if (Array.isArray(value)) {
+    if (Array.isArray(fieldValue)) {
       fieldType = "any[]";
-    } else if (typeof value === "object" && value !== null) {
+    } else if (typeof fieldValue === "object" && fieldValue !== null) {
       fieldType = "any";
     }
 
@@ -155,22 +227,42 @@ function generateStructureType(structure, markdownFields) {
 /**
  * Generate all structure types from config
  */
-function generateStructureTypes(config) {
+function generateStructureTypes(config: Configuration): {
+  types: string;
+  unionTypes: string;
+} {
   const structures = config._structures || {};
   const markdownFields = getMarkdownFields(config);
-  const types = [];
-  const structureTypesByName = new Map();
+  const types: string[] = [];
+  const structureTypesByName = new Map<string, string[]>();
 
   for (const [structureName, structureConfig] of Object.entries(structures)) {
-    if (!structureConfig.values) {
+    // Type guard to check if structureConfig has values property
+    if (
+      !structureConfig ||
+      typeof structureConfig !== "object" ||
+      !("values" in structureConfig)
+    ) {
       continue;
     }
 
-    const structureBlocks = structureConfig.values
-      .filter((structure) => structure.value?._type)
+    const values = structureConfig.values;
+    if (!Array.isArray(values)) {
+      continue;
+    }
+
+    const structureBlocks = values
+      .filter(
+        (structure): structure is StructureValue =>
+          structure?.value !== undefined &&
+          typeof structure.value === "object" &&
+          structure.value !== null &&
+          "_type" in structure.value
+      )
       .map((structure) => {
         types.push(generateStructureType(structure, markdownFields));
-        return `${toPascalCase(structure.value._type)}Block`;
+        const value = structure.value as Record<string, unknown>;
+        return `${toPascalCase(String(value._type))}Block`;
       });
 
     if (structureBlocks.length > 0) {
@@ -196,7 +288,7 @@ function generateStructureTypes(config) {
 /**
  * Generate slug and fullSlug computation logic for a collection
  */
-function generateSlugLogic(collectionConfig) {
+function generateSlugLogic(collectionConfig: CollectionConfig): string {
   const folder = collectionConfig.path?.split("/").pop() || "";
   return `
     const slug = document._meta.path === "index" ? "" : document._meta.path;
@@ -206,15 +298,29 @@ function generateSlugLogic(collectionConfig) {
 /**
  * Get schema fields from first schema in collection
  */
-function getFirstSchemaFields(collectionConfig) {
-  const firstSchema = Object.values(collectionConfig.schemas || {})[0];
-  return firstSchema?.path ? getSchemaFields(firstSchema.path) : [];
+function getFirstSchemaFields(collectionConfig: CollectionConfig): string[] {
+  const schemas = collectionConfig.schemas;
+  if (!schemas || typeof schemas !== "object") {
+    return [];
+  }
+
+  const firstSchema = Object.values(schemas)[0];
+  if (!firstSchema || typeof firstSchema !== "object") {
+    return [];
+  }
+
+  return "path" in firstSchema && typeof firstSchema.path === "string"
+    ? getSchemaFields(firstSchema.path)
+    : [];
 }
 
 /**
  * Generate schema field definitions for Zod schema
  */
-function generateSchemaFieldDefs(schemaFields, config) {
+function generateSchemaFieldDefs(
+  schemaFields: string[],
+  config: Configuration
+): string {
   return schemaFields
     .map(
       (key) =>
@@ -226,7 +332,11 @@ function generateSchemaFieldDefs(schemaFields, config) {
 /**
  * Generate collection definition
  */
-function generateCollection(collectionName, collectionConfig, config) {
+function generateCollection(
+  collectionName: string,
+  collectionConfig: CollectionConfig,
+  config: Configuration
+): { name: string; definition: string } | null {
   if (!collectionConfig.path) {
     return null;
   }
@@ -268,12 +378,14 @@ ${slugLogic}
 /**
  * Generate all collections from config
  */
-function generateAllCollections(config) {
+function generateAllCollections(
+  config: Configuration
+): Array<{ name: string; definition: string }> {
   const collectionsConfig = config.collections_config || {};
   return Object.entries(collectionsConfig)
     .filter(([name]) => name !== "data")
     .map(([name, cfg]) => generateCollection(name, cfg, config))
-    .filter(Boolean);
+    .filter((c): c is { name: string; definition: string } => c !== null);
 }
 
 // ============================================================================
@@ -283,7 +395,7 @@ function generateAllCollections(config) {
 /**
  * Generate the complete content-collections.ts file
  */
-function generateOutputFile(config) {
+function generateOutputFile(config: Configuration): string {
   const markdownFields = getMarkdownFields(config);
   const structureTypes = generateStructureTypes(config);
   const collections = generateAllCollections(config);
@@ -301,10 +413,11 @@ import { compileMDX } from "@content-collections/mdx";
 import remarkHtmlToComponents from "@/lib/remark-html-to-components.js";
 import yaml from "yaml";
 import { z } from "zod";
+import type { Configuration } from "@cloudcannon/configuration-types";
 
 // Read CloudCannon config
 const cloudcannonConfigPath = path.join(process.cwd(), "cloudcannon.config.yml");
-const cloudcannonConfig = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
+const cloudcannonConfig: Configuration = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
 
 // ============================================================================
 // Content Block Types (Auto-generated from CloudCannon config)

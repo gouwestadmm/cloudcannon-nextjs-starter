@@ -51,7 +51,7 @@ collections_config:
         name: Page with Visual Editor
         icon: view_module
   posts:
-    path: content/posts
+    path: content/blog/posts
     name: Blog Posts
     icon: article
     url: /blog/[slug]/

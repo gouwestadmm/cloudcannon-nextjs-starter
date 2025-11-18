@@ -5,10 +5,11 @@ import { compileMDX } from "@content-collections/mdx";
 import remarkHtmlToComponents from "@/lib/remark-html-to-components.js";
 import yaml from "yaml";
 import { z } from "zod";
+import type { Configuration } from "@cloudcannon/configuration-types";
 
 // Read CloudCannon config
 const cloudcannonConfigPath = path.join(process.cwd(), "cloudcannon.config.yml");
-const cloudcannonConfig = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
+const cloudcannonConfig: Configuration = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
 
 // ============================================================================
 // Content Block Types (Auto-generated from CloudCannon config)
@@ -164,9 +165,9 @@ const pages = defineCollection({
   include: "**/*.mdx",
   schema: z.object({
     _schema: z.any().optional(),
-    title: z.string().optional().nullish(),
+    title: z.any().optional(),
     subtitle: z.string().optional().nullish(),
-    introduction: z.string().optional().nullish(),
+    introduction: z.any().optional(),
     featured_image: z.string().optional().nullish(),
     featured_image_alt: z.string().optional().nullish(),
     published: z.boolean().optional(),
@@ -196,11 +197,11 @@ const pages = defineCollection({
 
 const posts = defineCollection({
   name: "posts",
-  directory: "content/posts",
+  directory: "content/blog/posts",
   include: "**/*.mdx",
   schema: z.object({
     _schema: z.any().optional(),
-    title: z.string().optional().nullish(),
+    title: z.any().optional(),
     subtitle: z.string().optional().nullish(),
     summary: z.string().optional().nullish(),
     date: z.coerce.date().optional(),
