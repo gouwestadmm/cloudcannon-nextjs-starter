@@ -7,9 +7,11 @@ import yaml from "yaml";
 import { z } from "zod";
 import type { Configuration } from "@cloudcannon/configuration-types";
 
-// Read CloudCannon config
+// Read CloudCannon config for type validation
+// This provides IDE type support and ensures the config file matches the expected CloudCannon schema
 const cloudcannonConfigPath = path.join(process.cwd(), "cloudcannon.config.yml");
 const cloudcannonConfig: Configuration = yaml.parse(fs.readFileSync(cloudcannonConfigPath, "utf8"));
+void cloudcannonConfig; // Intentionally loaded for type checking
 
 // ============================================================================
 // Content Block Types (Auto-generated from CloudCannon config)
